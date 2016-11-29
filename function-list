@@ -1,0 +1,77 @@
+#!/bin/bash -
+#
+# PROGRAM: fl
+# AUTHOR: Luciano D. Cecere
+# LICENSE: GPLv2
+#
+# This program is a wrapper for egrep to find BASH
+# functions in files.
+#
+# This program creates a function index for a list of
+# BASH files. Each file has it's own index. The out_file
+# is in_file with it's suffix stripped and "-index.txt"
+# appended to it.
+#
+# Use `fl *' to process all files in a directory.
+#
+# Directories, non-existant files and files without
+# functions are complained about and skipped.
+#
+# Functions are listed as they are discovered. Functions
+# which are listed more than once were defined more than
+# once. 
+
+export PATH=/bin:/usr/bin
+unalias -a
+PROGRAM="${0##*/}"
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $PROGRAM file1.sh file2.sh ..."
+  exit 1
+fi
+
+while [ $# -gt 0 ]
+do
+  in_file="$1"
+
+  if [ ! -e "$in_file" ]; then
+    echo "$in_file does not exist"
+    shift
+    continue
+  elif [ -d "$in_file" ]; then
+    echo "$in_file is a directory"
+    shift
+    continue
+  fi
+
+  egrep -on '[A-Za-z0-9_]+[(]+[)]' "$in_file" >/dev/null
+  if [ $? -eq 1 ]; then
+    echo "$in_file doesn't have functions"
+    shift
+    continue
+  fi
+
+  out_file="${in_file%%.*}-index.txt"
+  >"$out_file"
+
+	cat >>"$out_file"<<-eof
+	Function index for $in_file
+
+	ln | func
+	---------
+	eof
+
+  count=0
+  for i in $(egrep -on '[A-Za-z0-9_]+[(]+[)]' "$in_file")
+  do
+    echo "$i"
+    ((count++))
+  done >> "$out_file"
+
+  {
+    echo
+    echo "$count functions"
+  } >> "$out_file"
+
+  shift
+done
